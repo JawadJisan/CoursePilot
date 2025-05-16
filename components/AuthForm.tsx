@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 
 import { signIn, signUp } from "@/lib/actions/auth.action";
 import FormField from "./FormField";
+import { useAuthStore } from "@/lib/stores/auth.store";
 
 const authFormSchema = (type: FormType) => {
   return z.object({
@@ -30,6 +31,7 @@ const authFormSchema = (type: FormType) => {
 
 const AuthForm = ({ type }: { type: FormType }) => {
   const router = useRouter();
+  const { login } = useAuthStore();
 
   const formSchema = authFormSchema(type);
   const form = useForm<z.infer<typeof formSchema>>({
@@ -41,7 +43,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
     },
   });
 
-  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+  const onSubmits = async (data: z.infer<typeof formSchema>) => {
     try {
       if (type === "sign-up") {
         const { name, email, password } = data;
@@ -75,11 +77,15 @@ const AuthForm = ({ type }: { type: FormType }) => {
           password
         );
 
+        console.log("userCredential:", userCredential);
+
         const idToken = await userCredential.user.getIdToken();
         if (!idToken) {
           toast.error("Sign in Failed. Please try again.");
           return;
         }
+
+        console.log("idToken:", idToken);
 
         await signIn({
           email,
@@ -92,6 +98,50 @@ const AuthForm = ({ type }: { type: FormType }) => {
     } catch (error) {
       console.log(error);
       toast.error(`There was an error: ${error}`);
+    }
+  };
+
+  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    const { email, password } = data;
+
+    try {
+      const loginRes = await login(email, password);
+      console.log("loginRes:", loginRes);
+      toast.success("Signed in successfully.");
+      router.push("/");
+
+      // Firebase client SDK login
+      // const userCredential = await signInWithEmailAndPassword(
+      //   auth,
+      //   email,
+      //   password
+      // );
+      // console.log("userCredential:", userCredential);
+      // const idToken = await userCredential.user.getIdToken();
+
+      // console.log("idToken:", idToken);
+
+      // // Backend login
+      // const response = await fetch("http://localhost:5000/api/auth/login", {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({ idToken }),
+      //   credentials: "include",
+      // });
+
+      // console.log("Login Response:", response);
+
+      // // Subsequent requests will automatically include cookies
+      // const profileResponse = await fetch("http://localhost:5000/api/auth/me", {
+      //   credentials: "include",
+      // });
+
+      // console.log("profileResponse:", profileResponse);
+
+      // return await profileResponse.json();
+    } catch (error) {
+      console.log("Login error:", error);
+      throw error;
     }
   };
 
